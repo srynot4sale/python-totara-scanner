@@ -40,7 +40,21 @@ for result in results['assignment']:
         result['variable'],
         repr(result['depth'])
     )
+print ''
 
+print 'Checks found: %d' % len(results['check'])
+print ''
+
+for result in results['check']:
+    print '%s type on line #%d of %s in %s' % (
+        result['type'],
+        result['lineno'],
+        result['variable'],
+        repr(result['depth'])
+    )
+print ''
+
+print 'OKed calls:'
 print ''
 calls = parser.parse_results(results)
 
