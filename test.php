@@ -2,8 +2,8 @@
 
 # Should find:
 #
-# 12 calls
-# 5 faults
+# 14 calls
+# 6 faults
 
 # Bad cos never checked
 $unchecked_result = get_records('users');
@@ -35,6 +35,30 @@ function use_raw_result() {
     }
 }
 
+# OK, checked
+function check_obj_result() {
+    $result = new object();
+    $result->item = get_record();
+
+    if ($result->item) {
+        return $result->item;
+    }
+    else {
+        return false;
+    }
+}
+
+# Bad, checking different property
+function check_wrong_obj_result() {
+    $result = new object();
+    $result->thing = get_record();
+    $result->status = 1;
+
+    if ($result->status) {
+        return $result->thing;
+    }
+}
+
 # OK, check in if
 function check_result() {
     $check = get_records();
@@ -50,7 +74,7 @@ function check_result() {
 # Bad, not checked but in if
 function almost_checked_result() {
     $almost = get_records();
-    if (1) {
+    if ($help) {
         strlen($almost);
     }
 }
@@ -73,9 +97,10 @@ class test {
     # good, checked
     function goodmethod() {
         $result = get_records();
-        if ($result) {
+        if (!$result) {
             return;
         }
+        return $result;
     }
 
     # bad, not checked
