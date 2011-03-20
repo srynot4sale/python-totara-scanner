@@ -177,6 +177,13 @@ def parse_results(results):
         calls[search] = result
 
     for result in results['check']:
+        # Get latest function call
+        f = ''
+        for d in result['depth']:
+            if d.startswith('Function (') or d.startswith('Method ('):
+                f = d
+        search = (result['variable'], f)
+
         if search in calls:
             del calls[search]
             print 'OK call on line #%d in %s' % (
