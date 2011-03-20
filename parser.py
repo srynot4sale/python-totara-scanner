@@ -52,7 +52,7 @@ class locate:
 
 #    exclude = ['dict']
     inter = ['list', 'tuple', 'dict']
-    track = ['Function', 'If', 'Assignment', 'Method', 'FunctionCall']
+    track = ['Function', 'If', 'Assignment', 'Method', 'FunctionCall', 'TernaryOp', 'ObjectProperty']
     count = 0
 
     def deep_scan(self, name, item, depth):
@@ -132,12 +132,32 @@ class locate_checked_calls(locate):
                         result['type'] = 'assignment'
                         result['lineno'] = data[1]['lineno']
                         result['depth'] = list(depth)
-                        result['variable'] = data[1]['node'][1]['name']
+
+                        # Generate variable name
+                        if data[1]['node'][0] == 'ObjectProperty':
+                            vname = data[1]['node'][1]['name']+'['
+                            vname += data[1]['node'][1]['node'][1]['name']+']'
+                        else:
+                            vname = data[1]['node'][1]['name']
+
+                        result['variable'] = vname
                         self.results['assignment'].append(result)
                         self.vars.append(result['variable'])
 
         # Look for checks
-        if data[0] == 'Variable' and 'If' in depth:
+        if data[0] == 'ObjectProperty' and ('If' in depth or 'TernaryOp' in depth):
+            # Generate name
+            vname = data[1]['name']+'['+data[1]['node'][1]['name']+']'
+            if vname in self.vars:
+                result = {}
+                result['type'] = 'check'
+                result['lineno'] = data[1]['lineno']
+                result['depth'] = list(depth)
+                result['variable'] = vname
+                self.results['check'].append(result)
+
+
+        if data[0] == 'Variable' and ('If' in depth or 'TernaryOp' in depth) and 'ObjectProperty' not in depth:
             if data[1]['name'] in self.vars:
                 result = {}
                 result['type'] = 'check'
