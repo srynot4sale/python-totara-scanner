@@ -7,11 +7,12 @@
 # Usage: php2json.py < input.php > output.json
 
 import parser
+import sys
 
 files = []
 
-files.append(parser.parsed_file('/home/aaronb/code/dev/totaraparser/test.php'))
-#files.append(parser.parsed_file('/home/aaronb/code/dev/totaraparser/totara.php'))
+for arg in sys.argv[1:]:
+    files.append(parser.parsed_file(arg))
 
 finding = parser.locate_checked_calls(
     [
