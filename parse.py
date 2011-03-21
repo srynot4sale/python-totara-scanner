@@ -67,8 +67,7 @@ else:
     print ''
     print 'BAD - %d fault(s) found!' % len(calls)
     print ''
-    for call in calls:
-        result = calls[call]
+    for result in calls:
 
         print '%s on line #%d in %s' % (
             result['variable'],

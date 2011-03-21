@@ -148,6 +148,10 @@ class locate_checked_calls(locate):
 
 
     def get_var_name(self, data):
+        """
+        Check to see if a node is a variable or object property,
+        and if it is return a string representation of it's name
+        """
         if data[0] == 'ObjectProperty':
             vname = '$'+data[1]['name']+'['
             vname += data[1]['node'][1]['name']+']'
@@ -160,30 +164,40 @@ class locate_checked_calls(locate):
 
 
 def parse_results(results):
-    calls = {}
-    for result in results['assignment']:
-        # Get latest function call
-        f = ''
-        for d in result['depth']:
+    calls = results['assignment']
+
+    def get_scope(depth):
+        # Get scope
+        scope = ''
+        for d in depth:
             if d.startswith('Function (') or d.startswith('Method ('):
-                f = d
+                scope = d
+        return scope
 
-        search = (result['variable'], f)
-        calls[search] = result
 
-    for result in results['check']:
-        # Get latest function call
-        f = ''
-        for d in result['depth']:
-            if d.startswith('Function (') or d.startswith('Method ('):
-                f = d
-        search = (result['variable'], f)
+    for check in results['check']:
+        # Get scope
+        scope = get_scope(check['depth'])
 
-        if search in calls:
-            del calls[search]
-            print 'OK call on line #%d in %s' % (
-                result['lineno'],
-                repr(result['depth'])
-            )
+        i = -1
+        for call in calls:
+            i += 1
+
+            # Check if in same function / method scope
+            if scope != '' and scope not in call['depth']:
+                continue
+
+            # If in the global scope
+            if scope == '' and get_scope(call['depth']) != '':
+                continue
+
+            # Check this is the same variable and the check is after the call
+            if check['variable'] == call['variable']:
+                del calls[i]
+                print 'OK call on line #%d in %s' % (
+                    check['lineno'],
+                    repr(check['depth'])
+                )
+#                break
 
     return calls
