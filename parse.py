@@ -65,8 +65,7 @@ if len(calls) < 1:
 else:
 
     print ''
-    print 'BOO - found faults!'
-    print '%d fault(s) found' % len(calls)
+    print 'BAD - %d fault(s) found!' % len(calls)
     print ''
     for call in calls:
         result = calls[call]
@@ -76,4 +75,3 @@ else:
             result['lineno'],
             repr(result['depth'])
         )
-        print ''
