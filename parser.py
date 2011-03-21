@@ -192,7 +192,7 @@ def parse_results(results):
                 continue
 
             # Check this is the same variable and the check is after the call
-            if check['variable'] == call['variable']:
+            if check['variable'] == call['variable'] and call['lineno'] <= check['lineno']:
                 del calls[i]
                 print 'OK call on line #%d in %s' % (
                     check['lineno'],
