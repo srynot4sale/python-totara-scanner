@@ -83,6 +83,9 @@ class locate:
             else:
                 depth.append(item[0])
 
+        elif oftype == 'dict':
+            depth.append(item.keys()[0])
+
         # Recurse into each item
         if oftype in self.scan:
             if oftype in ['list', 'tuple']:
@@ -134,10 +137,19 @@ class locate_checked_calls(locate):
                             self.results['assignment'].append(result)
                             self.vars.append(result['variable'])
 
+                        # Check to see if this inside a unary op
+                        if depth[len(depth)-4:] == ['If', 'node', 'UnaryOp', 'expr']:
+                            result = {}
+                            result['type'] = 'check'
+                            result['lineno'] = data[1]['lineno']
+                            result['depth'] = list(depth)
+                            result['variable'] = vname
+                            self.results['check'].append(result)
+
         # Look for checks
         vname = self.get_var_name(data)
-        if vname and name == 'expr' and depth[len(depth)-1] not in ('Foreach'):
-            if vname in self.vars:
+        if vname and name == 'expr' and depth[len(depth)-2:] != ['Foreach', 'node']:
+            if 1:#vname in self.vars:
                 result = {}
                 result['type'] = 'check'
                 result['lineno'] = data[1]['lineno']
