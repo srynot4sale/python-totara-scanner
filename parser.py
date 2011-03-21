@@ -53,8 +53,6 @@ class locate:
     results = {}
 
     scan = ['list', 'tuple', 'dict']
-    track = ['Function', 'If', 'Assignment', 'Method', 'FunctionCall', 'TernaryOp', 'ObjectProperty']
-
 
     def locate(self, files):
         for fileobj in files:
@@ -79,11 +77,11 @@ class locate:
         if oftype == 'tuple':
             self.check(name, oftype, item, depth)
 
-            if item[0] in self.track:
-                if item[0] in ['Function', 'Method', 'FunctionCall']:
-                    depth.append('%s (%s)' % (item[0], item[1]['name']))
-                else:
-                    depth.append(item[0])
+            # Append current node to depth tree (with details for some types)
+            if item[0] in ['Class', 'Function', 'Method', 'FunctionCall']:
+                depth.append('%s (%s)' % (item[0], item[1]['name']))
+            else:
+                depth.append(item[0])
 
         # Recurse into each item
         if oftype in self.scan:
@@ -114,6 +112,7 @@ class locate_checked_calls(locate):
 
         # DEBUGGING
         if data[1]['lineno'] in DEBUG:
+            print name
             print data
             print depth
             print ''
@@ -137,7 +136,7 @@ class locate_checked_calls(locate):
 
         # Look for checks
         vname = self.get_var_name(data)
-        if vname and ('If' in depth or 'TernaryOp' in depth):
+        if vname and name == 'expr' and depth[len(depth)-1] not in ('Foreach'):
             if vname in self.vars:
                 result = {}
                 result['type'] = 'check'

@@ -2,8 +2,8 @@
 
 # Should find:
 #
-# 14 calls
-# 6 faults
+# 15 calls
+# 7 faults (9, 21, 41, 63, 79, 85, 117)
 
 # Bad cos never checked
 $unchecked_result = get_records('users');
@@ -16,7 +16,7 @@ function returned_result() {
     return get_record('nah');
 }
 
-# OK, returned before use (too hard to test correctly)
+# Bad, returned before use (should be OK, too hard to test correctly)
 function return_result() {
     $returned = get_record();
     return $returned;
@@ -25,6 +25,15 @@ function return_result() {
 # OK, result never used
 function abandonded_result() {
     $abandon = get_record_sql('sql stuff');
+}
+
+# OK, checked
+function simple_checked_result() {
+    $checked = get_record();
+    if (!$checked) {
+        return false;
+    }
+    return true;
 }
 
 # Bad, used not checked
