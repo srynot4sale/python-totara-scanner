@@ -13,6 +13,8 @@ from phply.phpparse import parser
 
 import simplejson
 
+DEBUG = []
+
 files = []
 
 class parsed_file:
@@ -120,6 +122,12 @@ class locate_checked_calls(locate):
     def check(self, name, oftype, data, depth):
         if oftype != 'tuple':
             return False
+
+        # DEBUGGING
+        if data[1]['lineno'] in DEBUG:
+            print data
+            print depth
+            print ''
 
         # Look for calls
         if data[0] == 'Assignment':
