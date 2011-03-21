@@ -17,11 +17,13 @@ DEBUG = []
 
 files = []
 
+
 class parsed_file:
 
     path = ''
     original = ''
     source = None
+
 
     def __init__(self, path):
         self.path = path
@@ -32,7 +34,6 @@ class parsed_file:
 
 
     def get_source(self):
-
         if not self.original:
             self.load()
 
@@ -47,37 +48,35 @@ class parsed_file:
 
 
 class locate:
+
     type = ''
     results = {}
 
-#    exclude = ['dict']
-    inter = ['list', 'tuple', 'dict']
+    scan = ['list', 'tuple', 'dict']
     track = ['Function', 'If', 'Assignment', 'Method', 'FunctionCall', 'TernaryOp', 'ObjectProperty']
-    count = 0
+
+
+    def locate(self, files):
+        for fileobj in files:
+            self.deep_scan('file', fileobj.get_source(), [])
+
+        return self.results
+
 
     def deep_scan(self, name, item, depth):
 
+        # Make a copy of the depth list
         depth = list(depth)
-        debug = 0
 
-        self.count += 1
-
+        # If generic, rebuild item
         if hasattr(item, 'generic'):
             item = item.generic(with_lineno=True)
 
+        # Get item's python type
         oftype = type(item).__name__
 
-        if debug:
-            print ''
-            print name
-            print 'Type: %s' % oftype
-
-        # Excluded items
+        # Only scan tuples
         if oftype == 'tuple':
-#            print ''
-#            print '%s (%s) at depth (%d)' % (name, oftype, len(depth))
-#            print item
-
             self.check(name, oftype, item, depth)
 
             if item[0] in self.track:
@@ -86,12 +85,8 @@ class locate:
                 else:
                     depth.append(item[0])
 
-
-        if self.count > 10:
-            pass
-            #return
-
-        if oftype in self.inter:
+        # Recurse into each item
+        if oftype in self.scan:
             if oftype in ['list', 'tuple']:
                 for child in item:
                     self.deep_scan('-', child, depth)
@@ -106,17 +101,11 @@ class locate_checked_calls(locate):
     name = None
     vars = []
 
+
     def __init__(self, function):
         self.name = function
         self.results['assignment'] = []
         self.results['check'] = []
-
-
-    def locate(self, files):
-        for fileobj in files:
-            self.deep_scan('file', fileobj.get_source(), [])
-
-        return self.results
 
 
     def check(self, name, oftype, data, depth):
@@ -171,23 +160,6 @@ class locate_checked_calls(locate):
                 result['depth'] = list(depth)
                 result['variable'] = data[1]['name']
                 self.results['check'].append(result)
-
-
-def export(items):
-    result = []
-    if items:
-       for item in items:
-           if hasattr(item, 'generic'):
-               item = item.generic(with_lineno=True)
-           result.append(item)
-    return result
-
-
-def get_json():
-    sourcefile = parsed_file('test.php')
-    sourcefile.original = input
-    simplejson.dump(export(sourcefile.get_source()), output, indent=2)
-    output.write('\n')
 
 
 def parse_results(results):
