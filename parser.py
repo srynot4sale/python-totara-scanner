@@ -152,8 +152,8 @@ class locate_checked_calls(locate):
         and if it is return a string representation of it's name
         """
         if data[0] == 'ObjectProperty':
-            vname = '$'+data[1]['name']+'['
-            vname += data[1]['node'][1]['name']+']'
+            vname = data[1]['node'][1]['name']+'['
+            vname += data[1]['name']+']'
         elif data[0] == 'Variable':
             vname = data[1]['name']
         else:
