@@ -13,8 +13,6 @@ from phply.phpparse import parser
 
 import simplejson
 
-with_lineno = True
-
 files = []
 
 class parsed_file:
@@ -63,7 +61,7 @@ class locate:
         self.count += 1
 
         if hasattr(item, 'generic'):
-            item = item.generic(with_lineno=with_lineno)
+            item = item.generic(with_lineno=True)
 
         oftype = type(item).__name__
 
@@ -172,7 +170,7 @@ def export(items):
     if items:
        for item in items:
            if hasattr(item, 'generic'):
-               item = item.generic(with_lineno=with_lineno)
+               item = item.generic(with_lineno=True)
            result.append(item)
     return result
 
