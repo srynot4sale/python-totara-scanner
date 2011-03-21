@@ -128,21 +128,16 @@ class locate_checked_calls(locate):
                         result['lineno'] = data[1]['lineno']
                         result['depth'] = list(depth)
 
-                        # Generate variable name
-                        if data[1]['node'][0] == 'ObjectProperty':
-                            vname = data[1]['node'][1]['name']+'['
-                            vname += data[1]['node'][1]['node'][1]['name']+']'
-                        else:
-                            vname = data[1]['node'][1]['name']
-
-                        result['variable'] = vname
-                        self.results['assignment'].append(result)
-                        self.vars.append(result['variable'])
+                        # Get variable name
+                        vname = self.get_var_name(data[1]['node'])
+                        if vname:
+                            result['variable'] = vname
+                            self.results['assignment'].append(result)
+                            self.vars.append(result['variable'])
 
         # Look for checks
-        if data[0] == 'ObjectProperty' and ('If' in depth or 'TernaryOp' in depth):
-            # Generate name
-            vname = data[1]['name']+'['+data[1]['node'][1]['name']+']'
+        vname = self.get_var_name(data)
+        if vname and ('If' in depth or 'TernaryOp' in depth):
             if vname in self.vars:
                 result = {}
                 result['type'] = 'check'
@@ -152,14 +147,16 @@ class locate_checked_calls(locate):
                 self.results['check'].append(result)
 
 
-        if data[0] == 'Variable' and ('If' in depth or 'TernaryOp' in depth) and 'ObjectProperty' not in depth:
-            if data[1]['name'] in self.vars:
-                result = {}
-                result['type'] = 'check'
-                result['lineno'] = data[1]['lineno']
-                result['depth'] = list(depth)
-                result['variable'] = data[1]['name']
-                self.results['check'].append(result)
+    def get_var_name(self, data):
+        if data[0] == 'ObjectProperty':
+            vname = '$'+data[1]['name']+'['
+            vname += data[1]['node'][1]['name']+']'
+        elif data[0] == 'Variable':
+            vname = data[1]['name']
+        else:
+            vname = False
+
+        return vname
 
 
 def parse_results(results):
