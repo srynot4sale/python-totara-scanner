@@ -52,11 +52,9 @@ class locate:
     type = ''
     results = {}
 
-    scan = ['list', 'tuple', 'dict']
-
     def locate(self, files):
         for fileobj in files:
-            self.deep_scan('file', fileobj.get_source(), [])
+            self.deep_scan('-', fileobj.get_source(), [])
 
         return self.results
 
@@ -73,27 +71,35 @@ class locate:
         # Get item's python type
         oftype = type(item).__name__
 
+        if oftype == 'dict' and 'name' in item:
+            depth.append('%s (%s)' % (name, item['name']))
+        elif name not in ['-', 'nodes']:
+            depth.append(name)
+
         # Only scan tuples
         if oftype == 'tuple':
             self.check(name, oftype, item, depth)
 
-            # Append current node to depth tree (with details for some types)
-            if item[0] in ['Class', 'Function', 'Method', 'FunctionCall']:
-                depth.append('%s (%s)' % (item[0], item[1]['name']))
-            else:
-                depth.append(item[0])
-
-        elif oftype == 'dict':
-            depth.append(item.keys()[0])
-
         # Recurse into each item
-        if oftype in self.scan:
-            if oftype in ['list', 'tuple']:
-                for child in item:
-                    self.deep_scan('-', child, depth)
-            else:
-                for child in item:
-                    self.deep_scan(child, item[child], depth)
+        if oftype == 'tuple':
+            for child in item[1:]:
+                self.deep_scan(item[0], child, depth)
+
+        if oftype == 'list':
+            for child in item:
+                self.deep_scan('-', child, depth)
+
+        elif oftype in ['dict']:
+            for child in item:
+                # Skip unneeded nodes
+                if child in ['lineno', 'name']:
+                    continue
+
+                # Skip empty params
+                if child == 'params' and item[child] == []:
+                    continue
+
+                self.deep_scan(child, item[child], depth)
 
 
 class locate_checked_calls(locate):
@@ -115,10 +121,17 @@ class locate_checked_calls(locate):
 
         # DEBUGGING
         if data[1]['lineno'] in DEBUG:
+            print ''
             print name
             print data
             print depth
             print ''
+
+        # Generate depth string for easier searching
+        strdepth = ',' + ','.join(depth) + ','
+
+        # Check if we are inside a if or ternary expression
+        incheck = (',If,expr,' in strdepth or ',TernaryOp,expr,' in strdepth)
 
         # Look for calls
         if data[0] == 'Assignment':
@@ -138,7 +151,8 @@ class locate_checked_calls(locate):
                             self.vars.append(result['variable'])
 
                         # Check to see if this inside a unary op
-                        if depth[len(depth)-4:] == ['If', 'node', 'UnaryOp', 'expr']:
+                        # Maybe just check if If, Expr is inside depth?
+                        if incheck:
                             result = {}
                             result['type'] = 'check'
                             result['lineno'] = data[1]['lineno']
@@ -148,8 +162,8 @@ class locate_checked_calls(locate):
 
         # Look for checks
         vname = self.get_var_name(data)
-        if vname and name == 'expr' and depth[len(depth)-2:] != ['Foreach', 'node']:
-            if 1:#vname in self.vars:
+        if vname and incheck:
+            if vname in self.vars:
                 result = {}
                 result['type'] = 'check'
                 result['lineno'] = data[1]['lineno']
@@ -163,7 +177,7 @@ class locate_checked_calls(locate):
         Check to see if a node is a variable or object property,
         and if it is return a string representation of it's name
         """
-        if data[0] == 'ObjectProperty':
+        if data[0] == 'ObjectProperty' and isinstance(data[1]['name'], str) and 'name' in data[1]['node'][1]:
             vname = data[1]['node'][1]['name']+'['
             vname += data[1]['name']+']'
         elif data[0] == 'Variable':
@@ -207,8 +221,12 @@ def parse_results(results):
                 del calls[i]
                 print 'OK call on line #%d in %s' % (
                     check['lineno'],
-                    repr(check['depth'])
+                    display_depth(check['depth'])
                 )
 #                break
 
     return calls
+
+
+def display_depth(depth):
+    return ' -> '.join(depth)

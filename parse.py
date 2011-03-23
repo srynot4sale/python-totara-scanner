@@ -20,7 +20,6 @@ finding = parser.locate_checked_calls(
         'get_records_sql',
         'get_record',
         'get_record_sql',
-        'get_field',
         'get_records_select',
         'get_record_select'
     ]
@@ -38,7 +37,7 @@ for result in results['assignment']:
         result['type'],
         result['lineno'],
         result['variable'],
-        repr(result['depth'])
+        parser.display_depth(result['depth'])
     )
 print ''
 
@@ -50,7 +49,7 @@ for result in results['check']:
         result['type'],
         result['lineno'],
         result['variable'],
-        repr(result['depth'])
+        parser.display_depth(result['depth'])
     )
 print ''
 
@@ -72,5 +71,5 @@ else:
         print '%s on line #%d in %s' % (
             result['variable'],
             result['lineno'],
-            repr(result['depth'])
+            parser.display_depth(result['depth'])
         )

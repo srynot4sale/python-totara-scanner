@@ -2,8 +2,8 @@
 
 # Should find:
 #
-# 15 calls
-# 7 faults (9, 21, 41, 63, 79, 85, 117)
+# 17 calls
+# 8 faults (9, 21, 27, 41, 63, 79, 85, 117)
 
 # Bad cos never checked
 $unchecked_result = get_records('users');
@@ -22,7 +22,7 @@ function return_result() {
     return $returned;
 }
 
-# OK, result never used
+# Bad, but should be ignored because result never used
 function abandonded_result() {
     $abandon = get_record_sql('sql stuff');
 }
@@ -119,6 +119,18 @@ class test {
     }
 }
 
+# OK, teriary check using is_array
+function is_array_check() {
+    $array = get_records();
+    return is_array($array) ? $array : array();
+}
+
+# OK, positive check
+function if_positive_check() {
+    if ($pos = get_records()) {
+        dostuff($pos);
+    }
+}
 
 if (!$checked_result) {
     return false;
