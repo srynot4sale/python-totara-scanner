@@ -30,6 +30,7 @@ class parsed_file:
 
 
     def load(self):
+        self.original = None
         self.original = file(self.path, 'r')
 
 
@@ -38,11 +39,17 @@ class parsed_file:
             self.load()
 
         if not self.source:
-            self.source = parser.parse(
-                self.original.read(),
-                lexer=lexer,
-                tracking=True
-            )
+            try:
+                self.source = parser.parse(
+                    self.original.read(),
+                    lexer=lexer,
+                    tracking=True
+                )
+            except SyntaxError as (errno, strerror):
+                print 'Ignoring %s due to advanced syntax' % self.path
+                print errno
+                print strerror
+                return None
 
         return self.source
 
@@ -54,7 +61,11 @@ class locate:
 
     def locate(self, files):
         for fileobj in files:
-            self.deep_scan('-', fileobj.get_source(), [])
+            source = fileobj.get_source()
+            if not source:
+                continue
+
+            self.deep_scan('-', source, [])
 
         return self.results
 
@@ -230,3 +241,129 @@ def parse_results(results):
 
 def display_depth(depth):
     return ' -> '.join(depth)
+
+
+class locate_global_vars(locate):
+
+    type = 'call'
+    name = None
+    vars = []
+
+
+    def __init__(self, vars):
+        self.name = vars
+        self.results['globals'] = []
+        self.results['usage'] = []
+
+
+    def check(self, name, oftype, data, depth):
+        if oftype != 'tuple':
+            return False
+
+        # DEBUGGING
+        if data[1]['lineno'] in DEBUG:
+            print ''
+            print 'name: %s' % name
+            print 'data: %s' % str(data)
+            print 'depth: %s' % depth
+            print ''
+
+        # Generate depth string for easier searching
+        strdepth = ',' + ','.join(depth) + ','
+
+        # Check if we are inside a if or ternary expression
+        incheck = (',If,expr,' in strdepth or ',TernaryOp,expr,' in strdepth)
+
+        # Look for globals
+        if data[0] == 'Variable' and depth[-1] == 'Global' and data[1]['name'] in self.name:
+            result = {}
+            result['type'] = 'global variable'
+            result['lineno'] = data[1]['lineno']
+            result['depth'] = list(depth[0:-1])
+            if not len(result['depth']):
+                result['depth'] = ['global scope']
+
+            result['variable'] = data[1]['name']
+            self.results['globals'].append(result)
+            return
+
+
+        # Look for uses of globals
+        if data[0] == 'Variable' and depth[-1] != 'Global' and data[1]['name'] in self.name:
+            result = {}
+            result['type'] = 'variable usage'
+            result['lineno'] = data[1]['lineno']
+            result['depth'] = list(depth)
+            if not len(result['depth']):
+                result['depth'] = ['global scope']
+
+            result['variable'] = data[1]['name']
+            self.results['usage'].append(result)
+            return
+
+
+    def get_var_name(self, data):
+        """
+        Check to see if a node is a variable or object property,
+        and if it is return a string representation of it's name
+        """
+        if data[0] == 'ObjectProperty' and isinstance(data[1]['name'], str) and 'name' in data[1]['node'][1]:
+            vname = data[1]['node'][1]['name']+'['
+            vname += data[1]['name']+']'
+        elif data[0] == 'Variable':
+            vname = data[1]['name']
+        else:
+            vname = False
+
+        return vname
+
+
+def parse_results2(results):
+    globals = results['globals']
+    usage = results['usage']
+    badcalls = []
+
+    def get_scope(depth):
+        # Get scope
+        scope = ''
+        for d in depth:
+            if d.startswith('Function (') or d.startswith('Method ('):
+                scope = d
+        return scope
+
+
+    for use in usage:
+        found = False
+
+        # Get scope
+        scope = get_scope(use['depth'])
+
+        # Ignore global scope
+        if scope == '':
+            continue
+
+        i = -1
+        for glo in globals:
+            i += 1
+
+            # Check if in same function / method scope
+            if scope != '' and scope not in glo['depth']:
+                continue
+
+            # If in the global scope
+            if scope == '' and get_scope(glo['depth']) != '':
+                continue
+
+            # Check this is the same variable and the check is after the call
+            if glo['variable'] == use['variable'] and glo['lineno'] < use['lineno']:
+#                print 'OK usage on line #%d in %s' % (
+#                    use['lineno'],
+#                    display_depth(use['depth'])
+#                )
+                found = True
+                break
+
+        if not found:
+            badcalls.append(use)
+
+    return badcalls
